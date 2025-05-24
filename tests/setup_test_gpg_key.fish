@@ -8,7 +8,6 @@ if echo $gpg_key_exists | grep -q "test@example.com"
     return 0
 end
 
-
 # Create GPG key configuration file
 echo "Key-Type: RSA
 Key-Length: 2048
@@ -18,7 +17,7 @@ Name-Real: CI Test
 Name-Email: test@example.com
 Expire-Date: 0
 %no-protection
-%commit" > gpg_key_details.txt
+%commit" >gpg_key_details.txt
 
 gpg --batch --gen-key gpg_key_details.txt
 

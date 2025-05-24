@@ -45,5 +45,6 @@ end
 function _filecrypt_uninstall --on-event filecrypt_uninstall
     # Clean up any temporary files or settings if needed
     # Note: We don't remove the encrypted files directory as it contains user data
+    functions --erase (functions --all | string match --entire -r '^_?filecrypt')
     echo "filecrypt plugin uninstalled. Encrypted files remain in $XDG_CONFIG_HOME/fish/secure/files"
 end
