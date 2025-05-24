@@ -30,7 +30,7 @@ function filecrypt
             _filecrypt_restore_all $subcommand_args
         case version
             # Display version information
-            echo "filecrypt version 1.0.0"
+            echo "filecrypt version 1.0.1"
         case '*'
             echo "Unknown subcommand: $subcommand"
             echo "Available subcommands: config, encrypt, decrypt/restore, delete, list/ls, restore-all, version"
