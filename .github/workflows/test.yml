@@ -1,0 +1,142 @@
+name: Test Plugin
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: 
+         - ubuntu-latest
+         # - macos-latest
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Fish Shell
+        uses: fish-actions/install-fish@v1
+
+      - name: Install dependencies
+        run: |
+          if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+            sudo apt-get update
+            sudo apt-get install -y gnupg jq 
+          else
+            brew install gnupg jq 
+          fi
+          gpg --version
+          jq --version
+          fish --version
+
+      - name: Setup GPG for testing
+        run: |
+          # gpg --batch --gen-key <<EOF
+          # Key-Type: RSA
+          # Key-Length: 2048
+          # Name-Real: Test User
+          # Name-Email: test@example.com
+          # Expire-Date: 0
+          # %no-protection
+          # %commit
+          # EOF
+
+          cat > gpg_key_details.txt <<EOF
+          Key-Type: RSA
+          Key-Length: 2048
+          Subkey-Type: RSA
+          Subkey-Length: 2048
+          Name-Real: CI Test
+          Name-Email: test@example.com
+          Expire-Date: 0
+          %no-protection
+          %commit
+          EOF
+          gpg --batch --gen-key gpg_key_details.txt
+
+      - name: Install Fisher and fish-filecrypt
+        run: |
+          fish -c "curl -sL https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish | source"
+          fish -c "fisher install $GITHUB_WORKSPACE"
+          fish -c "fisher list | grep -q 'filecrypt'"
+          fish -c "filecrypt version"
+
+      - name: Test plugin structure
+        run: fish test.fish
+
+      - name: Test basic functionality
+        run: |
+          fish -c "
+          set -gx FILECRYPT_GPG_RECIPIENT test@example.com
+          source functions/filecrypt.fish
+          source completions/filecrypt.fish
+          source conf.d/filecrypt.fish
+
+          # Test config
+          filecrypt config
+
+          # Test help
+          filecrypt 2>&1 | grep -q 'Usage:'
+
+          echo 'Basic tests passed!'
+          "
+
+  syntax-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: fish-actions/install-fish@v1
+      - uses: fish-actions/syntax-check@v1
+
+  format-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: fish-actions/install-fish@v1
+      - name: Check formatting manually
+        run: |
+          echo "Checking all Fish files for proper formatting..."
+          find_result=0
+          for file in $(find . -name "*.fish" -type f); do
+            if ! fish_indent -c "$file"; then
+              echo "::error file=$file::$file is not properly formatted"
+              find_result=1
+            fi
+          done
+
+          if [ $find_result -eq 1 ]; then
+            echo "::error::Some files are not properly formatted. Run 'fish_indent -w' on them."
+            exit 1
+          else
+            echo "All files are properly formatted!"
+          fi
+      - uses: fish-actions/format-check@v1
+
+  auto-format:
+    runs-on: ubuntu-latest
+    needs: [format-check]
+    # Only run this job if format-check fails
+    if: ${{ github.event_name == 'pull_request' && failure() && needs.format-check.result == 'failure' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          # Using the default GITHUB_TOKEN with write permissions
+      - uses: fish-actions/install-fish@v1
+      - name: Format Fish files
+        run: |
+          echo "Formatting Fish files in the repository"
+          find . -name "*.fish" -type f -exec fish_indent -w {} \;
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: "style: auto-format Fish files"
+          commit_user_name: "GitHub Actions"
+          commit_user_email: "actions@github.com"
+          commit_author: "GitHub Actions <actions@github.com>"
