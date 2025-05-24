@@ -4,22 +4,22 @@
 set -l subcommands "config encrypt decrypt restore delete list ls restore-all version"
 
 # Complete subcommands
-complete -c filecrypt -f -n "__fish_use_subcommand" -a "config" -d "Configure filecrypt settings"
-complete -c filecrypt -f -n "__fish_use_subcommand" -a "encrypt" -d "Encrypt a file and add to registry"
-complete -c filecrypt -f -n "__fish_use_subcommand" -a "decrypt" -d "Restore an encrypted file (alias for restore)"
-complete -c filecrypt -f -n "__fish_use_subcommand" -a "restore" -d "Restore an encrypted file"
-complete -c filecrypt -f -n "__fish_use_subcommand" -a "delete" -d "Delete an entry from registry"
-complete -c filecrypt -f -n "__fish_use_subcommand" -a "list" -d "List all encrypted files"
-complete -c filecrypt -f -n "__fish_use_subcommand" -a "ls" -d "List all encrypted files (alias for list)"
-complete -c filecrypt -f -n "__fish_use_subcommand" -a "restore-all" -d "Restore multiple or all encrypted files"
-complete -c filecrypt -f -n "__fish_use_subcommand" -a "version" -d "Show filecrypt version"
+complete -c filecrypt -f -n __fish_use_subcommand -a config -d "Configure filecrypt settings"
+complete -c filecrypt -f -n __fish_use_subcommand -a encrypt -d "Encrypt a file and add to registry"
+complete -c filecrypt -f -n __fish_use_subcommand -a decrypt -d "Restore an encrypted file (alias for restore)"
+complete -c filecrypt -f -n __fish_use_subcommand -a restore -d "Restore an encrypted file"
+complete -c filecrypt -f -n __fish_use_subcommand -a delete -d "Delete an entry from registry"
+complete -c filecrypt -f -n __fish_use_subcommand -a list -d "List all encrypted files"
+complete -c filecrypt -f -n __fish_use_subcommand -a ls -d "List all encrypted files (alias for list)"
+complete -c filecrypt -f -n __fish_use_subcommand -a restore-all -d "Restore multiple or all encrypted files"
+complete -c filecrypt -f -n __fish_use_subcommand -a version -d "Show filecrypt version"
 
 # Reuse the registry entries function from the main script
 # This is defined in filecrypt.fish
 
 # Completions for specific subcommands
 # For 'config' subcommand
-complete -c filecrypt -f -n "__fish_seen_subcommand_from config" -a "set-recipient" -d "Set GPG recipient for encryption"
+complete -c filecrypt -f -n "__fish_seen_subcommand_from config" -a set-recipient -d "Set GPG recipient for encryption"
 
 # For 'encrypt' subcommand
 complete -c filecrypt -f -n "__fish_seen_subcommand_from encrypt" -a "(find . -type f -not -path '*/\.git/*')" -d "File to encrypt"
