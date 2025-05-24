@@ -35,31 +35,6 @@ jobs:
           jq --version
           fish --version
 
-      - name: Setup GPG for testing
-        run: |
-          # gpg --batch --gen-key <<EOF
-          # Key-Type: RSA
-          # Key-Length: 2048
-          # Name-Real: Test User
-          # Name-Email: test@example.com
-          # Expire-Date: 0
-          # %no-protection
-          # %commit
-          # EOF
-
-          cat > gpg_key_details.txt <<EOF
-          Key-Type: RSA
-          Key-Length: 2048
-          Subkey-Type: RSA
-          Subkey-Length: 2048
-          Name-Real: CI Test
-          Name-Email: test@example.com
-          Expire-Date: 0
-          %no-protection
-          %commit
-          EOF
-          gpg --batch --gen-key gpg_key_details.txt
-
       - name: Install Fisher and fish-filecrypt
         run: |
           fish -c "curl -sL https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish | source && fisher install $GITHUB_WORKSPACE"
@@ -84,6 +59,9 @@ jobs:
 
           echo 'Basic tests passed!'
           "
+
+      - name: Test functional encryption/decryption
+        run: fish tests/test_functionality.fish
 
   syntax-check:
     runs-on: ubuntu-latest

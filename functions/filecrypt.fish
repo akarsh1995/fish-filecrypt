@@ -94,7 +94,16 @@ function _filecrypt_encrypt
     end
     
     # Get file content as base64 encoded string to store in JSON
-    set -l file_content (base64 -i "$argv[1]" | string collect)
+    # set -l file_content (base64 -i "$argv[1]" | string collect)
+    # Use -w 0 to disable line wrapping on Linux, string replace to remove any line breaks
+    set -l file_content (cat "$argv[1]" | base64 -w 0 2>/dev/null || cat "$argv[1]" | base64 | string replace -a '\n' '')
+    
+    # Debug logging for encryption
+    echo "DEBUG: Encrypting file: $argv[1]" >&2
+    echo "DEBUG: File size: "(wc -c < "$argv[1]" | string trim)" bytes" >&2
+    echo "DEBUG: Base64 content length: "(echo $file_content | wc -c | string trim) >&2
+    echo "DEBUG: First 50 chars of base64: "(echo $file_content | head -c 50) >&2
+    echo "DEBUG: Last 50 chars of base64: "(echo $file_content | tail -c 50) >&2
     
     # Prepare registry JSON content
     set -l json_content "{}"
@@ -117,14 +126,37 @@ function _filecrypt_encrypt
     # Get absolute path for reliable storage
     set -l abs_source_path (realpath "$argv[1]")
     
-    # Get file modification time for versioning
-    set -l modified_time (stat -f "%Sm" -t "%Y-%m-%d %H:%M:%S" "$argv[1]")
+    set -l modified_time ""
+    # Get file modification time for versioning (cross-platform compatible)
+    if test (uname) = "Darwin"
+        # macOS
+        set modified_time (stat -f "%Sm" -t "%Y-%m-%d %H:%M:%S" "$argv[1]")
+    else
+        # Linux
+        set modified_time (stat -c "%y" "$argv[1]" | cut -d'.' -f1)
+    end
+    
+    # Debug logging for modified time
+    echo "DEBUG: Modified time: $modified_time" >&2
+    echo "DEBUG: Platform: "(uname) >&2
     
     # Update the JSON registry with the new encrypted file info and content
-    echo $json_content | jq --arg source "$abs_source_path" --arg content "$file_content" \
+    echo "DEBUG: Creating JSON entry..." >&2
+    set -l new_json (echo $json_content | jq --arg source "$abs_source_path" --arg content "$file_content" \
        --arg desc "$description" --arg mtime "$modified_time" \
-       '.[$source] = {"content": $content, "description": $desc, "modified_time": $mtime}' | \
-       gpg --quiet --yes --recipient "$gpg_recipient" --encrypt --output $registry_path
+       '.[$source] = {"content": $content, "description": $desc, "modified_time": $mtime}')
+    
+    if test $status -ne 0
+        echo "ERROR: Failed to create JSON entry" >&2
+        return 1
+    end
+    
+    echo "DEBUG: JSON entry created successfully" >&2
+    echo "DEBUG: Encrypting to registry..." >&2
+    echo "DEBUG: GPG Recipient: $gpg_recipient" >&2
+    echo "DEBUG: Registry path: $registry_path" >&2
+    
+    echo $new_json | gpg --yes --recipient "$gpg_recipient" --encrypt --output $registry_path
     
     if test $status -ne 0
         echo "Failed to update encrypted files registry"
@@ -193,6 +225,11 @@ function _filecrypt_restore
         return 1
     end
     
+    # Debug: Show registry structure
+    echo "DEBUG: Registry decrypted successfully" >&2
+    echo "DEBUG: Registry content length: "(echo $decrypted_content | wc -c | string trim) >&2
+    echo "DEBUG: Registry keys: "(echo $decrypted_content | jq -r 'keys | join(", ")' 2>/dev/null || echo "Failed to parse JSON") >&2
+    
     # check if the first argument is empty (original file path)
     if test -z "$argv[1]"
         echo "Please provide the original file path to restore"
@@ -212,6 +249,19 @@ function _filecrypt_restore
     set -l file_content (echo $decrypted_content | jq -r --arg source "$abs_source_path" '.[$source].content')
     set -l modified_time (echo $decrypted_content | jq -r --arg source "$abs_source_path" '.[$source].modified_time')
     
+    # Debug logging
+    echo "DEBUG: Restoring file: $abs_source_path" >&2
+    echo "DEBUG: Modified time: $modified_time" >&2
+    echo "DEBUG: Base64 content length: "(echo $file_content | wc -c | string trim) >&2
+    echo "DEBUG: First 50 chars of base64: "(echo $file_content | head -c 50) >&2
+    echo "DEBUG: Last 50 chars of base64: "(echo $file_content | tail -c 50) >&2
+    
+    # Check if file_content is valid
+    if test -z "$file_content"
+        echo "ERROR: No file content found in registry" >&2
+        return 1
+    end
+    
     # Set the destination path
     set -l dest_path "$abs_source_path"
     set -l custom_destination false
@@ -225,8 +275,26 @@ function _filecrypt_restore
     set -l dir_path (dirname "$dest_path")
     mkdir -p "$dir_path"
     
-    # Decode base64 content and write to file
-    echo $file_content | base64 -d > "$dest_path"
+    # Debug: Test base64 decoding first
+    echo "DEBUG: Testing base64 decode..." >&2
+    # Clean any whitespace from base64 content before decoding
+    set -l clean_content (echo $file_content | string replace -a ' ' '' | string replace -a '\n' '' | string replace -a '\t' '')
+    echo "DEBUG: Cleaned base64 length: "(echo $clean_content | wc -c | string trim) >&2
+    echo "DEBUG: Cleaned base64 content: $clean_content" >&2
+    
+    set -l test_decode (echo $clean_content | base64 -d 2>&1)
+    set -l decode_status $status
+    echo "DEBUG: Base64 decode test status: $decode_status" >&2
+    
+    if test $decode_status -ne 0
+        echo "ERROR: Base64 decode failed with error: $test_decode" >&2
+        echo "DEBUG: Original base64 content that failed:" >&2
+        echo "$file_content" >&2
+        return 1
+    end
+    
+    # Decode base64 content and write to file (use cleaned content)
+    echo $clean_content | base64 -d > "$dest_path"
     
     if test $status -ne 0
         echo "Failed to restore file"
@@ -447,7 +515,9 @@ function _filecrypt_restore_all
         mkdir -p "$dir_path"
         
         # Decode base64 content and write to file
-        echo $file_content | base64 -d > "$output_path"
+        # Clean any whitespace from base64 content before decoding
+        set -l clean_content (echo $file_content | string replace -a ' ' '' | string replace -a '\n' '' | string replace -a '\t' '')
+        echo $clean_content | base64 -d > "$output_path"
         
         if test $status -ne 0
             echo "  ❌ Failed to restore file"
