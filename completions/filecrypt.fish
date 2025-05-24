@@ -1,7 +1,7 @@
 # Completions for the filecrypt command
 
 # Define subcommands with descriptions
-set -l subcommands "config encrypt decrypt restore delete list ls restore-all"
+set -l subcommands "config encrypt decrypt restore delete list ls restore-all version"
 
 # Complete subcommands
 complete -c filecrypt -f -n "__fish_use_subcommand" -a "config" -d "Configure filecrypt settings"
@@ -12,6 +12,7 @@ complete -c filecrypt -f -n "__fish_use_subcommand" -a "delete" -d "Delete an en
 complete -c filecrypt -f -n "__fish_use_subcommand" -a "list" -d "List all encrypted files"
 complete -c filecrypt -f -n "__fish_use_subcommand" -a "ls" -d "List all encrypted files (alias for list)"
 complete -c filecrypt -f -n "__fish_use_subcommand" -a "restore-all" -d "Restore multiple or all encrypted files"
+complete -c filecrypt -f -n "__fish_use_subcommand" -a "version" -d "Show filecrypt version"
 
 # Reuse the registry entries function from the main script
 # This is defined in filecrypt.fish
