@@ -7,7 +7,9 @@ This is a complete Fisher plugin for the Fish shell that provides comprehensive 
 ```
 fish-filecrypt/
 ├── functions/
-│   └── filecrypt.fish          # Main plugin functions
+│   ├── filecrypt.fish          # Public entrypoint
+│   ├── _filecrypt_config.fish  # One file per private helper
+│   └── ...                     # (_filecrypt_*.fish, __filecrypt_*.fish)
 ├── completions/
 │   └── filecrypt.fish          # Tab completions
 ├── conf.d/

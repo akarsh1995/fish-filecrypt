@@ -39,8 +39,13 @@ function test_plugin_structure
 
     set -l expected_functions filecrypt _filecrypt_encrypt _filecrypt_restore _filecrypt_delete _filecrypt_list _filecrypt_restore_all _filecrypt_config __filecrypt_registry_entries
     for func in $expected_functions
-        if grep -q "function $func" "$plugin_dir/functions/filecrypt.fish"
-            echo "✓ Function $func defined"
+        if grep -q "function $func" $plugin_dir/functions/*.fish
+            if test -f "$plugin_dir/functions/$func.fish"
+                echo "✓ Function $func defined in functions/$func.fish"
+            else
+                echo "✗ Function $func is not in its own file functions/$func.fish"
+                set errors (math $errors + 1)
+            end
         else
             echo "✗ Missing function: $func"
             set errors (math $errors + 1)

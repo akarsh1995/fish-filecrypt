@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- Split `functions/filecrypt.fish` into one file per function. The public
+  `filecrypt` entrypoint stays in `functions/filecrypt.fish`; private helpers
+  live in `functions/_filecrypt_*.fish` and autoload individually.
+
 ## [1.0.0] - 2024-12-28
 
 ### Added

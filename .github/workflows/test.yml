@@ -50,6 +50,7 @@ jobs:
         run: |
           fish -c "
           set -gx FILECRYPT_GPG_RECIPIENT test@example.com
+          set fish_function_path $PWD/functions $fish_function_path
           source functions/filecrypt.fish
           source completions/filecrypt.fish
           source conf.d/filecrypt.fish
